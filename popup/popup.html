@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto Timesheet</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-area">
+        <img src="../icons/icon32.png" alt="Clock Icon" class="logo-icon">
+        <div>
+          <h1 class="app-title">Auto Timesheet</h1>
+          <span class="app-subtitle" id="today-date-str">Loading date...</span>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span class="badge" id="sync-badge">No Folder</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="today-tab">Today</button>
+      <button class="tab-btn" data-tab="history-tab">Monthly Log (<span id="tab-month-name">...</span>)</button>
+      <button class="tab-btn" data-tab="settings-tab">Settings</button>
+    </nav>
+
+    <!-- Tab 1: Today's Active Session -->
+    <main class="tab-content active" id="today-tab">
+      <!-- Live Worked Counter -->
+      <div class="timer-card">
+        <div class="timer-label">Time Worked Today</div>
+        <div class="timer-display" id="live-worked-time">00:00:00</div>
+        <div class="timer-meta">
+          <span>Current Time: <strong id="live-clock">--:--:--</strong></span>
+          <span class="separator">•</span>
+          <span id="session-status">Active</span>
+        </div>
+      </div>
+
+      <!-- Controls Form -->
+      <div class="card form-card">
+        <!-- Start Time Field -->
+        <div class="form-group">
+          <label for="start-time-input">
+            <span>Start Time:</span>
+            <button class="btn-text" id="reset-start-btn" title="Reset to browser launch time">Reset</button>
+          </label>
+          <div class="input-row">
+            <input type="time" id="start-time-input" class="input-control" step="1">
+            <span class="input-hint" id="start-time-hint"></span>
+          </div>
+        </div>
+
+        <!-- Lunch Break Field -->
+        <div class="form-group">
+          <label for="lunch-break-input">
+            <span>Lunch Break (minutes):</span>
+            <button class="btn-text" id="save-default-lunch-btn" title="Save this value as default for all future days">Set as Default</button>
+          </label>
+          <div class="input-row">
+            <input type="number" id="lunch-break-input" class="input-control" min="0" max="1440" step="5" value="30">
+          </div>
+        </div>
+
+        <!-- Notes / Comments Field -->
+        <div class="form-group">
+          <label for="comments-input">Comment / Notes for today:</label>
+          <textarea id="comments-input" class="textarea-control" placeholder="What did you work on today? (saved with CSV)"></textarea>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="actions-row">
+        <button class="btn btn-secondary" id="save-session-btn">Save Changes</button>
+        <button class="btn btn-primary" id="finalize-btn">Finalize / Clock Out</button>
+      </div>
+
+      <div class="status-message" id="today-status-msg"></div>
+    </main>
+
+    <!-- Tab 2: Monthly Log & Recalculate -->
+    <section class="tab-content" id="history-tab">
+      <div class="history-toolbar">
+        <div class="history-title">
+          <div class="month-nav">
+            <button class="btn-icon" id="prev-month-btn" title="Previous Month">◀</button>
+            <select id="month-select" class="month-dropdown" title="Select Month"></select>
+            <button class="btn-icon" id="next-month-btn" title="Next Month">▶</button>
+          </div>
+          <span class="record-count" id="entry-count-badge">0 entries</span>
+        </div>
+        <div class="history-actions">
+          <button class="btn btn-sm btn-primary" id="add-entry-btn" title="Add timesheet entry for a past day">
+            ➕ Add Entry
+          </button>
+          <button class="btn btn-sm btn-secondary" id="recalc-month-btn" title="Recalculate worked hours for all entries in this month">
+            🔄 Recalculate
+          </button>
+          <button class="btn btn-sm btn-secondary" id="export-csv-btn" title="Download CSV file">
+            ⬇️ CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="timesheet-table" id="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Start</th>
+              <th>Lunch</th>
+              <th>End</th>
+              <th>Worked</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body">
+            <tr>
+              <td colspan="7" class="empty-state">No entries logged for this month yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Add / Edit Entry Modal -->
+      <div class="modal hidden" id="edit-entry-modal">
+        <div class="modal-content">
+          <h3 id="modal-title">Edit Timesheet Entry</h3>
+          <div class="form-group">
+            <label for="modal-entry-date">Date:</label>
+            <input type="date" id="modal-entry-date" class="input-control">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modal-start-time">Start Time:</label>
+              <input type="time" id="modal-start-time" class="input-control" step="1">
+            </div>
+            <div class="form-group">
+              <label for="modal-lunch">Lunch (min):</label>
+              <input type="number" id="modal-lunch" class="input-control" min="0" max="720">
+            </div>
+            <div class="form-group">
+              <label for="modal-end-time">End Time:</label>
+              <input type="time" id="modal-end-time" class="input-control" step="1">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="modal-comment">Comments:</label>
+            <input type="text" id="modal-comment" class="input-control" placeholder="Optional notes / work description">
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-danger" id="modal-delete-btn" title="Delete this entry permanently">Delete Entry</button>
+            <div class="modal-actions-right">
+              <button class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+              <button class="btn btn-primary" id="modal-save-btn">Save & Recalculate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Settings & Local File System Directory Sync -->
+    <section class="tab-content" id="settings-tab">
+      <div class="card settings-card">
+        <h3>Local File System Sync</h3>
+        <p class="description">
+          Link a local directory (e.g. <code>~/.autotimesheet</code> or your Documents folder).
+          The extension will automatically write and update monthly <code>YYYY-MMM.csv</code> files matching the original Java AutoTimesheet.
+        </p>
+
+        <div class="directory-status-box" id="dir-status-box">
+          <div class="dir-icon">📁</div>
+          <div class="dir-info">
+            <div class="dir-name" id="selected-dir-name">No local folder linked</div>
+            <div class="dir-sub" id="selected-dir-path">Click below to select a folder on your computer.</div>
+          </div>
+        </div>
+
+        <div class="dir-actions">
+          <button class="btn btn-primary" id="select-folder-btn">Select Local Folder</button>
+          <button class="btn btn-secondary hidden" id="sync-folder-btn">Sync Now</button>
+          <button class="btn btn-danger btn-sm hidden" id="disconnect-folder-btn">Disconnect</button>
+        </div>
+
+        <hr class="divider">
+
+        <h3>Preferences</h3>
+        <div class="form-group">
+          <label for="pref-default-lunch">Default Lunch Break (minutes):</label>
+          <input type="number" id="pref-default-lunch" class="input-control" min="0" max="720" value="30">
+        </div>
+        <button class="btn btn-secondary" id="save-preferences-btn">Save Preferences</button>
+      </div>
+
+      <div class="about-card">
+        <div class="about-title">Auto Timesheet WebExtension</div>
+        <div class="about-version">Version 1.0.0 (Port of Java AutoTimesheet)</div>
+        <div class="about-desc">
+          Automatically tracks daily computer work hours upon browser startup, logs start and end times, calculates daily lunch deduction, and produces monthly CSV summaries.
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer status -->
+    <footer class="footer">
+      <span id="footer-status">Ready</span>
+      <a href="#" id="open-options-link" class="footer-link">Hover icon to see worked time</a>
+    </footer>
+  </div>
+
+  <script src="../lib/timesheet.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/fs-sync.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
